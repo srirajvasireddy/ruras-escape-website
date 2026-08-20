@@ -1,0 +1,16 @@
+github_owner = "srirajvasireddy"
+github_repo  = "ruras-escape-website"
+
+# Set to true only when applying into an AWS account that does not already
+# have a GitHub OIDC provider. The srirajvasireddy.com stack creates one.
+# create_github_oidc_provider = true
+
+# project_name is the Project tag on every resource and the prefix for the
+# names of the OAC, CloudFront function, and IAM role. Leave it alone unless
+# the project itself is renamed.
+# project_name = "ruras-escape-website"
+
+# Only override these if the defaults collide with something that already
+# exists globally in AWS.
+# bucket_name = "ruras-escape-website"
+# site_domain = "rurasescape.srirajvasireddy.com"

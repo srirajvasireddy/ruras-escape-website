@@ -55,24 +55,81 @@ static HTML for the three named secondary routes plus `404.html`. This lets
 search engines and link-preview services see the correct title, description,
 canonical, Open Graph URL, and indexing directive without executing JavaScript.
 
-## S3 and CloudFront deployment
+## Infrastructure as code
 
-1. Run `npm ci && npm run check` in CI.
-2. Sync `dist/` to a private S3 bucket through CloudFront Origin Access Control.
-3. Associate `deployment/cloudfront-function.js` as a viewer-request function.
-   It rewrites only the known application routes to their metadata-specific
+All AWS infrastructure for this site lives in `terraform/` — the S3 bucket,
+the CloudFront distribution and its ACM certificate, the route-rewrite
+function, the security-headers policy, and the IAM role GitHub Actions
+assumes. It mirrors the `srirajvasireddy.com` stack, with real 404s instead of
+SPA catch-all rewrites. See `terraform/README.md` for first-time setup.
+
+```bash
+cd terraform/site
+terraform plan
+terraform apply
+```
+
+DNS stays at GoDaddy: `rurasescape.srirajvasireddy.com` is a CNAME to the
+CloudFront distribution, and the ACM certificate is validated by a CNAME added
+there by hand. Terraform prints both records as outputs.
+
+`deployment/cloudfront-function.js` and
+`deployment/cloudfront-response-headers-policy.json` are read directly by the
+Terraform config, so those checked-in files are the single source of truth for
+routing and security headers. Changing either one requires a `terraform apply`;
+the deploy workflow does not pick them up.
+
+## Automated deployment
+
+Every push to `main` runs `.github/workflows/deploy.yml`, which installs
+dependencies, runs `npm run check`, uploads `dist/` to S3, invalidates the
+CloudFront HTML paths, and smoke-tests the live URLs. A failing lint, build,
+or production assertion stops the deploy before anything reaches S3. Changes
+under `terraform/` and to Markdown files do not trigger it. The workflow can
+also be started manually from the Actions tab.
+
+GitHub authenticates to AWS with short-lived OIDC credentials; no AWS keys are
+stored in the repository. The role, its trust policy, and its permissions are
+defined in `terraform/site/iam-oidc.tf`. After applying the stack, set these
+repo variables from the Terraform outputs:
+
+| Variable | Terraform output |
+| --- | --- |
+| `AWS_DEPLOY_ROLE_ARN` | `github_actions_role_arn` |
+| `S3_BUCKET_NAME` | `bucket_name` |
+| `CLOUDFRONT_DISTRIBUTION_ID` | `cloudfront_distribution_id` |
+| `AWS_REGION` | `us-east-1` (optional; workflow defaults to this) |
+
+Uploads are ordered so content-hashed `assets/*` land first with
+`public, max-age=31536000, immutable`, other static files get a one-week TTL,
+HTML and crawler files get `no-cache`, and stale objects are deleted last — so
+a visitor never sees HTML referencing an asset that is not yet uploaded. Add
+required reviewers to the `production` environment in GitHub if you want
+deploys to wait for approval.
+
+## Deployment architecture
+
+Terraform provisions all of this; the list is the reference for what the stack
+guarantees.
+
+1. CI runs `npm ci && npm run check` before any upload.
+2. `dist/` syncs to a private S3 bucket reachable only through CloudFront
+   Origin Access Control.
+3. `deployment/cloudfront-function.js` runs as a viewer-request function. It
+   rewrites only the known application routes to their metadata-specific
    `index.html` files. Unknown paths remain unknown.
-4. Configure CloudFront's 403 and 404 custom error responses to use `/404.html`
-   while preserving an HTTP **404** response. Do not map every missing path to
-   `/index.html`, which creates soft 404s.
-5. Create/attach the response-headers policy described by
-   `deployment/cloudfront-response-headers-policy.json`. Confirm the production
-   response contains CSP, HSTS, frame protection, MIME-sniffing protection,
-   Referrer-Policy, Permissions-Policy, and Cross-Origin-Opener-Policy.
-6. Serve content-hashed `assets/*` with `public, max-age=31536000, immutable`.
-   Serve HTML with `no-cache` or a short TTL.
-7. Invalidate HTML paths after deployment and smoke-test every direct URL,
-   including an unknown path.
+4. CloudFront's 403 and 404 custom error responses serve `/404.html` while
+   preserving an HTTP **404** response. Missing paths are never mapped to
+   `/index.html`, which would create soft 404s.
+5. The response-headers policy in
+   `deployment/cloudfront-response-headers-policy.json` is attached to the
+   default behavior, so production responses carry CSP, HSTS, frame
+   protection, MIME-sniffing protection, Referrer-Policy, Permissions-Policy,
+   and Cross-Origin-Opener-Policy.
+6. Content-hashed `assets/*` are served with
+   `public, max-age=31536000, immutable`; HTML is served `no-cache`.
+7. The workflow invalidates HTML paths after deployment and smoke-tests every
+   direct URL, including an unknown path.
 
 ## Store-launch controls outside this repository
 

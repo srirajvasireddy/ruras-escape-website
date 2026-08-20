@@ -1,0 +1,113 @@
+name: Deploy to S3
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "terraform/**"
+      - "**.md"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint, build and verify production output
+        run: npm run check
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      # Content-hashed assets first, so newly referenced files exist before any
+      # HTML that points at them becomes reachable.
+      - name: Upload immutable assets
+        run: |
+          aws s3 sync dist/ "s3://${{ vars.S3_BUCKET_NAME }}/" \
+            --no-progress \
+            --exclude "*" \
+            --include "assets/*" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Upload remaining static files
+        run: |
+          aws s3 sync dist/ "s3://${{ vars.S3_BUCKET_NAME }}/" \
+            --no-progress \
+            --exclude "assets/*" \
+            --exclude "*.html" \
+            --exclude "*.xml" \
+            --exclude "robots.txt" \
+            --exclude "site.webmanifest" \
+            --cache-control "public, max-age=604800"
+
+      - name: Upload HTML and crawler files
+        run: |
+          aws s3 sync dist/ "s3://${{ vars.S3_BUCKET_NAME }}/" \
+            --no-progress \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.xml" \
+            --include "robots.txt" \
+            --include "site.webmanifest" \
+            --cache-control "no-cache"
+
+      # Deletions run last: nothing is removed until the new build is fully live.
+      - name: Remove files that are no longer part of the build
+        run: |
+          aws s3 sync dist/ "s3://${{ vars.S3_BUCKET_NAME }}/" \
+            --no-progress \
+            --delete \
+            --size-only
+
+      - name: Invalidate CloudFront HTML paths
+        run: |
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/" "/index.html" "/404.html" \
+                    "/privacy-policy" "/privacy-policy/index.html" \
+                    "/terms" "/terms/index.html" \
+                    "/support" "/support/index.html" \
+                    "/robots.txt" "/sitemap.xml" "/site.webmanifest" \
+            --query 'Invalidation.Id' --output text)
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --id "$INVALIDATION_ID"
+
+      - name: Smoke-test production URLs
+        run: |
+          BASE="https://rurasescape.srirajvasireddy.com"
+          fail=0
+          check() {
+            code=$(curl -s -o /dev/null -w '%{http_code}' -L "$BASE$1")
+            if [ "$code" != "$2" ]; then
+              echo "FAIL $1 expected $2 got $code"
+              fail=1
+            else
+              echo "ok   $1 -> $code"
+            fi
+          }
+          check "/" 200
+          check "/privacy-policy" 200
+          check "/terms" 200
+          check "/support" 200
+          check "/this-path-does-not-exist" 404
+          exit $fail
