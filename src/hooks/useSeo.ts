@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { siteConfig } from '../config/site'
+import { reportPageMetadata } from '../lib/analytics'
 
 export interface SeoOptions {
   /** Full document title, including any suffix. */
@@ -59,5 +60,9 @@ export function useSeo({ title, description, path, image, index = true }: SeoOpt
       document.head.appendChild(canonical)
     }
     canonical.href = url
+
+    // Release the queued page view now that this route's title is on the
+    // document, so analytics never reports the previous page's title.
+    reportPageMetadata(path, title)
   }, [title, description, path, image, index])
 }

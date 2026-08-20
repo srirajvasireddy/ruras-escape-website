@@ -28,6 +28,10 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
 
+    <!-- Google Analytics is loaded from src/lib/analytics.ts so the production
+         CSP does not need an inline-script exception. -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />

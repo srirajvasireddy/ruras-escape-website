@@ -32,6 +32,11 @@ export interface SiteConfig {
   /** Portfolio linked from the footer creator credit. */
   creatorUrl: string
   social: SocialLinks
+  /** Website measurement configuration. */
+  analytics: {
+    /** GA4 measurement id. Empty disables analytics everywhere. */
+    googleMeasurementId: string
+  }
   legal: {
     privacyEffectiveDate: string
     privacyLastUpdated: string
@@ -68,9 +73,13 @@ export const siteConfig: SiteConfig = {
     x: '',
   },
 
+  analytics: {
+    googleMeasurementId: 'G-BEMVN1TNEH',
+  },
+
   legal: {
     privacyEffectiveDate: 'August 15, 2026',
-    privacyLastUpdated: 'August 16, 2026',
+    privacyLastUpdated: 'August 20, 2026',
     termsEffectiveDate: 'August 15, 2026',
     termsLastUpdated: 'August 16, 2026',
   },

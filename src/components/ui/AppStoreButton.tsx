@@ -1,4 +1,6 @@
+import type { MouseEvent } from 'react'
 import { siteConfig } from '../../config/site'
+import { resolveSection, trackEvent } from '../../lib/analytics'
 import type { ButtonSize } from './buttonStyles'
 import { buttonClasses } from './buttonStyles'
 
@@ -15,6 +17,11 @@ function AppleMark() {
   )
 }
 
+/**
+ * Apple is a 2027 release, so this is always a "coming soon" control. It uses
+ * `aria-disabled` rather than `disabled` so the interest it attracts is still
+ * measurable -- browsers suppress events on a truly disabled button.
+ */
 export function AppStoreButton({
   size = 'lg',
   className = '',
@@ -25,7 +32,16 @@ export function AppStoreButton({
   return (
     <button
       type="button"
-      disabled
+      aria-disabled="true"
+      data-analytics-skip
+      onClick={(event: MouseEvent<HTMLButtonElement>) =>
+        trackEvent('cta_click', {
+          cta: 'app_store',
+          cta_state: 'coming_soon',
+          section: resolveSection(event.currentTarget),
+          page_path: window.location.pathname,
+        })
+      }
       aria-label={`Coming to the Apple App Store in ${siteConfig.appStoreReleaseYear}`}
       className={buttonClasses('secondary', size, `cursor-not-allowed opacity-75 ${className}`)}
     >

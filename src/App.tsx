@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { Analytics } from './components/analytics/Analytics'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
 
@@ -67,6 +68,7 @@ export default function App() {
           />
         </Route>
       </Routes>
+      <Analytics />
     </BrowserRouter>
   )
 }

@@ -4,6 +4,7 @@ import { GooglePlayButton } from '../components/ui/GooglePlayButton'
 import { AppStoreButton } from '../components/ui/AppStoreButton'
 import { siteConfig } from '../config/site'
 import { useSeo } from '../hooks/useSeo'
+import { describeElement, resolveSection, trackEvent } from '../lib/analytics'
 
 const worlds = [
   {
@@ -199,6 +200,10 @@ export function HomePage() {
   const [gameTrigger, setGameTrigger] = useState<HTMLButtonElement | null>(null)
 
   const openGame = (trigger: HTMLButtonElement) => {
+    trackEvent('game_open', {
+      element_text: describeElement(trigger),
+      section: resolveSection(trigger),
+    })
     setGameTrigger(trigger)
     setIsGameOpen(true)
   }
@@ -238,7 +243,7 @@ export function HomePage() {
               worlds to return to the lantern trees.
             </p>
             <div className="game-hero__actions">
-              <button className="game-button game-button--gold" type="button" onClick={(event) => openGame(event.currentTarget)}>Discover the game <span aria-hidden="true">↗</span></button>
+              <button className="game-button game-button--gold" type="button" data-analytics-skip onClick={(event) => openGame(event.currentTarget)}>Discover the game <span aria-hidden="true">↗</span></button>
               <a className="game-button game-button--glass" href="#story">Discover Rura&apos;s story</a>
             </div>
             <ul className="game-hero__notes" aria-label="Game highlights">
@@ -330,7 +335,7 @@ export function HomePage() {
           <div className="game-story__route">
             <div className="game-story__route-heading">
               <div><span>THE CAMPAIGN</span><strong>200 steps through the impossible</strong></div>
-              <button className="game-button game-button--gold" type="button" onClick={(event) => openGame(event.currentTarget)}>Try a level <span aria-hidden="true">→</span></button>
+              <button className="game-button game-button--gold" type="button" data-analytics-skip onClick={(event) => openGame(event.currentTarget)}>Try a level <span aria-hidden="true">→</span></button>
             </div>
             <ol aria-label="The four-world route home">
               {worlds.map((world, index) => (

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { primaryNavLinks } from '../../config/navigation'
 import { useScrolled } from '../../hooks/useScrolled'
+import { trackEvent } from '../../lib/analytics'
 import { GooglePlayButton } from '../ui/GooglePlayButton'
 import { AppStoreButton } from '../ui/AppStoreButton'
 import { Icon } from '../ui/Icon'
@@ -97,7 +98,14 @@ export function Navbar() {
         <button
           ref={toggleRef}
           type="button"
-          onClick={() => setIsMenuOpen((open) => !open)}
+          data-analytics-skip
+          onClick={() => {
+            trackEvent('menu_toggle', {
+              action: isMenuOpen ? 'close' : 'open',
+              page_path: location.pathname,
+            })
+            setIsMenuOpen((open) => !open)
+          }}
           aria-expanded={isMenuOpen}
           aria-controls="mobile-menu"
           className="text-mist-100 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-white/10 lg:hidden"

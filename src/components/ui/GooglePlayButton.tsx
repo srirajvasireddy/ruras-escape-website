@@ -1,4 +1,6 @@
+import type { MouseEvent } from 'react'
 import { hasGooglePlayUrl, siteConfig } from '../../config/site'
+import { resolveSection, trackEvent } from '../../lib/analytics'
 import { GooglePlayMark } from './Icon'
 import type { ButtonSize, ButtonVariant } from './buttonStyles'
 import { buttonClasses } from './buttonStyles'
@@ -12,8 +14,10 @@ export interface GooglePlayButtonProps {
 /**
  * The single place the Google Play call to action is defined.
  *
- * While `siteConfig.googlePlayUrl` is empty this renders a disabled
- * "Coming Soon" state instead of a link that goes nowhere.
+ * While `siteConfig.googlePlayUrl` is empty this renders a "Coming Soon" state
+ * instead of a link that goes nowhere. That state uses `aria-disabled` rather
+ * than `disabled` so pre-launch download intent is still measurable -- browsers
+ * suppress events on a truly disabled button.
  */
 export function GooglePlayButton({
   size = 'lg',
@@ -29,11 +33,23 @@ export function GooglePlayButton({
     </span>
   )
 
+  const track = (event: MouseEvent<HTMLElement>) => {
+    trackEvent('cta_click', {
+      cta: 'google_play',
+      cta_state: hasGooglePlayUrl ? 'available' : 'coming_soon',
+      section: resolveSection(event.currentTarget),
+      page_path: window.location.pathname,
+      link_url: hasGooglePlayUrl ? siteConfig.googlePlayUrl : undefined,
+    })
+  }
+
   if (!hasGooglePlayUrl) {
     return (
       <button
         type="button"
-        disabled
+        aria-disabled="true"
+        data-analytics-skip
+        onClick={track}
         className={buttonClasses(variant, size, `cursor-not-allowed opacity-70 ${className}`)}
       >
         <GooglePlayMark className="h-6 w-6" />
@@ -47,6 +63,8 @@ export function GooglePlayButton({
       href={siteConfig.googlePlayUrl}
       target="_blank"
       rel="noopener noreferrer"
+      data-analytics-skip
+      onClick={track}
       className={buttonClasses(variant, size, className)}
     >
       <GooglePlayMark className="h-6 w-6" />

@@ -30,6 +30,26 @@ for (const route of ['privacy-policy', 'terms', 'support']) {
   }
 }
 
+const bundleDirectory = new URL('dist/assets/', root)
+const bundles = (await readdir(bundleDirectory)).filter((name) => name.endsWith('.js'))
+const bundleSources = await Promise.all(
+  bundles.map((name) => readFile(new URL(name, bundleDirectory), 'utf8')),
+)
+const measurementId = (await readFile(new URL('src/config/site.ts', root), 'utf8')).match(/googleMeasurementId: '([^']+)'/)?.[1]
+check('a Google Analytics measurement id is configured', Boolean(measurementId))
+check('the analytics tag ships in the built bundle', bundleSources.some((source) => measurementId && source.includes(measurementId)))
+check('page views are sent by the app rather than the tag', bundleSources.some((source) => source.includes('send_page_view')))
+
+const privacySource = await readFile(new URL('src/data/legal/privacy.ts', root), 'utf8')
+check('the privacy policy discloses website analytics', privacySource.includes('Google Analytics 4'))
+check('the privacy policy no longer claims the site sets no analytics cookies', !privacySource.includes('does not currently use advertising or analytics cookies'))
+
+const csp = JSON.parse(await readFile(new URL('deployment/cloudfront-response-headers-policy.json', root), 'utf8'))
+  .ResponseHeadersPolicyConfig.SecurityHeadersConfig.ContentSecurityPolicy.ContentSecurityPolicy
+check('CSP allows the analytics tag to load', /script-src [^;]*googletagmanager\.com/.test(csp))
+check('CSP allows analytics measurement requests', /connect-src [^;]*google-analytics\.com/.test(csp))
+check('CSP still blocks inline script', !/script-src [^;]*unsafe-inline/.test(csp))
+
 check('a deployable 404 document exists', await exists('dist/404.html'))
 check('CloudFront route function is documented as code', await exists('deployment/cloudfront-function.js'))
 check('CloudFront security headers policy is present', await exists('deployment/cloudfront-response-headers-policy.json'))

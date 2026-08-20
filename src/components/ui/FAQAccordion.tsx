@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FaqItem } from '../../data/faq'
+import { trackEvent } from '../../lib/analytics'
 import { Icon } from './Icon'
 
 export interface FAQAccordionProps {
@@ -11,10 +12,18 @@ export interface FAQAccordionProps {
 export function FAQAccordion({ items, defaultOpenId }: FAQAccordionProps) {
   const [openIds, setOpenIds] = useState<string[]>(defaultOpenId ? [defaultOpenId] : [])
 
-  const toggle = (id: string) =>
+  const toggle = (item: FaqItem) => {
+    const isOpen = openIds.includes(item.id)
+    trackEvent('faq_toggle', {
+      faq_id: item.id,
+      faq_question: item.question,
+      action: isOpen ? 'close' : 'open',
+      page_path: window.location.pathname,
+    })
     setOpenIds((current) =>
-      current.includes(id) ? current.filter((openId) => openId !== id) : [...current, id],
+      isOpen ? current.filter((openId) => openId !== item.id) : [...current, item.id],
     )
+  }
 
   return (
     <div className="divide-white/8 border-white/8 bg-night-900/50 divide-y overflow-hidden rounded-card border">
@@ -25,7 +34,8 @@ export function FAQAccordion({ items, defaultOpenId }: FAQAccordionProps) {
             <h3>
               <button
                 type="button"
-                onClick={() => toggle(item.id)}
+                onClick={() => toggle(item)}
+                data-analytics-skip
                 aria-expanded={isOpen}
                 aria-controls={`faq-panel-${item.id}`}
                 id={`faq-trigger-${item.id}`}

@@ -22,7 +22,9 @@ deployment files, image formats, and the asset budget.
 Runtime values live in `src/config/site.ts`:
 
 - Set `googlePlayUrl` when the store listing becomes public. Until then, every
-  Play CTA is an intentionally disabled “Coming soon” button.
+  Play CTA is an intentionally inert “Coming soon” button (`aria-disabled`, so
+  pre-launch download intent is still measurable).
+- `analytics.googleMeasurementId` is the GA4 property the website reports to.
 - `supportEmail` must be a monitored player/privacy inbox.
 - `privacyEmail` and `businessMailingAddress` are public legal-contact details.
 - `publisher` must match the legal operator named in the Terms, Privacy Policy,
@@ -54,6 +56,46 @@ screen. After Vite builds, `scripts/postbuild.mjs` creates metadata-specific
 static HTML for the three named secondary routes plus `404.html`. This lets
 search engines and link-preview services see the correct title, description,
 canonical, Open Graph URL, and indexing directive without executing JavaScript.
+
+## Analytics
+
+The website reports to Google Analytics 4 (`analytics.googleMeasurementId` in
+`src/config/site.ts`). `src/lib/analytics.ts` loads `gtag.js` from application
+code rather than an inline snippet, so the production CSP needs no
+`unsafe-inline` exception, and it is the only module that should touch
+`window.gtag`. Consent Mode v2 defaults deny every advertising signal; the site
+runs no ads.
+
+`src/lib/autoTracking.ts` captures interactions site-wide so new links and
+buttons are measured the day they ship:
+
+| Event | Fired when |
+| --- | --- |
+| `page_view` | Every route change, with the title the route applied |
+| `ui_click` | Any click on a link, button or `role="button"` |
+| `click` (`outbound: true`) | Clicks leaving the site, matching GA4 enhanced measurement |
+| `contact_click` | `mailto:` and `tel:` links |
+| `scroll_depth` | 25/50/75/90% of a page reached |
+| `section_view` | A page section reaches the middle of the viewport |
+| `exception` | Uncaught errors and unhandled promise rejections |
+
+Components add richer events where the DOM cannot describe intent:
+`cta_click` (store buttons), `faq_toggle`, `menu_toggle`, and the playable demo's
+`game_open`, `game_move`, `game_hint`, `game_undo`, `game_reset`, `game_complete`
+and `game_close`. Any element that sends its own event carries
+`data-analytics-skip` so one interaction is never counted twice.
+
+Analytics stays inert during `npm run dev` -- events are logged to the console
+instead. Set `VITE_GA_DEBUG=true` to load the real tag and stream into GA
+DebugView, and `VITE_GA_MEASUREMENT_ID=G-...` to report to a different property.
+
+The CloudFront CSP in `deployment/cloudfront-response-headers-policy.json`
+allow-lists the Google tag and measurement endpoints. **Apply the Terraform
+change before deploying the site**, otherwise the browser blocks the tag.
+
+Website measurement is disclosed in `src/data/legal/privacy.ts`. There is no
+cookie banner: analytics cookies are set for every visitor, which is fine for
+US-only traffic but needs prior consent for EEA/UK visitors.
 
 ## Infrastructure as code
 

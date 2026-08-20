@@ -23,7 +23,8 @@ export const privacySections: LegalSection[] = [
       'Advertising information: after the advertising SDK is permitted to initialize and when you request a rewarded ad, Google Mobile Ads may process IP address and approximate location inferred from it, app and device identifiers (including an advertising identifier where available and permitted), ad interactions, diagnostics, and fraud-prevention signals.',
       'Purchase information: Google Play processes payment credentials. The Game may receive a product identifier, localized price, purchase token, order or transaction identifier, purchase state, and acknowledgement status so it can grant and reconcile Rura Coins. We do not receive your full payment-card details.',
       'Support information: if you contact us, we receive the information you choose to provide, such as your email address, message, screenshots, device details, and purchase information needed to investigate the request.',
-      'Website request data: the website does not currently use advertising or analytics cookies. Hosting and security providers may automatically process ordinary request information such as IP address, browser type, requested page, timestamp, and diagnostic logs to deliver and protect the site.',
+      'Website usage analytics: the website uses Google Analytics 4 to measure how the site is used. It records page views, clicks on links and buttons, outbound and email-contact clicks, how far pages are scrolled, which sections are reached, playable-demo interactions such as moves, hints, restarts and completions, and script errors, together with the referring page, approximate location derived from IP address, device, browser and language. Google Analytics stores first-party cookies (names beginning “_ga”) that hold a randomly generated identifier for the browser. Advertising storage, advertising personalization and Google signals are disabled for the website, and we do not use website analytics to build advertising profiles.',
+      'Website request data: hosting and security providers may automatically process ordinary request information such as IP address, browser type, requested page, timestamp, and diagnostic logs to deliver and protect the site.',
     ],
   },
   {
@@ -48,9 +49,12 @@ export const privacySections: LegalSection[] = [
     body: [
       'Production builds can use Google Analytics for Firebase to receive the usage and device-context events described above. Analytics is off by default for every new installation and after any Terms or Privacy version that requires a renewed choice. Firebase collection remains disabled unless you expressly select the optional analytics choice during the first-run agreement or later turn on “Share usage analytics” in Profile. Turning it off stops future delivery and clears queued events waiting to be sent by the Game.',
       'When analytics is enabled, Firebase may process an app-instance identifier, IP-derived country or general location, and device or app information under Google’s terms. The Game also uses a pseudonymous random, app-scoped installation identifier for analytics. It is not an advertising identifier or account ID, and we do not use it to identify you by name.',
+      'The website is measured separately with Google Analytics 4 (measurement ID G-BEMVN1TNEH). It is used to understand which pages and sections people read, which calls to action they use, and where the playable demo helps or frustrates. Google acts as our processor for this measurement, and the identifiers it sets are pseudonymous browser identifiers rather than names or account IDs. You can prevent website analytics by installing the Google Analytics opt-out browser add-on, by blocking analytics cookies or scripts in your browser or an extension, or by browsing with those cookies cleared.',
     ],
     links: [
       { label: 'Firebase privacy and security', href: 'https://firebase.google.com/support/privacy' },
+      { label: 'Google Analytics opt-out browser add-on', href: 'https://tools.google.com/dlpage/gaoptout' },
+      { label: 'How Google uses data from sites that use its services', href: 'https://policies.google.com/technologies/partner-sites' },
       { label: 'Google Privacy Policy', href: 'https://policies.google.com/privacy' },
     ],
   },
@@ -82,7 +86,7 @@ export const privacySections: LegalSection[] = [
     id: 'sharing',
     title: '8. When We Disclose Information',
     body: [
-      'We disclose information only as described in this policy: to Google Analytics for Firebase for expressly opted-in measurement; to Google AdMob and User Messaging Platform for requested ads and consent choices; to Google Play for distribution and purchases; to website hosting and security providers; to professional advisers or vendors bound to use information for authorized purposes; or when reasonably necessary to comply with law, enforce our terms, protect users, investigate fraud, or complete a business transfer.',
+      'We disclose information only as described in this policy: to Google Analytics for Firebase for expressly opted-in measurement in the Game; to Google Analytics 4 for website measurement; to Google AdMob and User Messaging Platform for requested ads and consent choices; to Google Play for distribution and purchases; to website hosting and security providers; to professional advisers or vendors bound to use information for authorized purposes; or when reasonably necessary to comply with law, enforce our terms, protect users, investigate fraud, or complete a business transfer.',
       'We do not rent personal information or maintain a data-broker business. We do not disclose support correspondence publicly unless you ask us to or we remove identifying details and have another lawful basis.',
     ],
   },
@@ -115,8 +119,8 @@ export const privacySections: LegalSection[] = [
     title: '12. Your Rights And Choices',
     body: [
       'Depending on where you live, you may have rights to know or access personal information, obtain a portable copy, correct it, request deletion, restrict or object to processing, withdraw consent, opt out of sale or sharing and targeted advertising, and appeal a denied request. You will not be discriminated against for exercising a privacy right.',
-      'You can disable usage analytics in Profile, manage advertising consent through Ad privacy options when shown, reset or delete local data through the Game or device settings, and use operating-system advertising controls. To make another request, use the Support page and state that it is a privacy request. We may need to verify the request. Because the Game has no account and analytics identifiers are pseudonymous, we may be unable to locate server-side information without sufficient technical identifiers.',
-      'Authorized agents may submit requests where permitted by law. You may also complain to your local data-protection authority. California residents may use the same contact route for rights under the CCPA if that law applies to our processing. The website currently performs no targeted advertising and therefore has no website sale/share opt-out signal to apply; we will honor legally required browser signals if that changes.',
+      'You can disable usage analytics in Profile, manage advertising consent through Ad privacy options when shown, reset or delete local data through the Game or device settings, and use operating-system advertising controls. For the website, you can opt out of Google Analytics with Google’s opt-out browser add-on or by blocking analytics cookies in your browser. To make another request, use the Support page and state that it is a privacy request. We may need to verify the request. Because the Game has no account and analytics identifiers are pseudonymous, we may be unable to locate server-side information without sufficient technical identifiers.',
+      'Authorized agents may submit requests where permitted by law. You may also complain to your local data-protection authority. California residents may use the same contact route for rights under the CCPA if that law applies to our processing. The website performs no advertising and requests no advertising storage or personalization from Google Analytics, so there is no website sale/share opt-out signal to apply; we will honor legally required browser signals if that changes.',
     ],
   },
   {

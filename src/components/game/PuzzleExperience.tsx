@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { trackEvent } from '../../lib/analytics'
 
 type Hex = { q: number; r: number }
 type Axis = 'q' | 'r' | 's' | 'free'
@@ -338,7 +339,9 @@ function PuzzleBoard({ level, state, selectedBlock, targets = [], hintedMove, dr
   }
 
   return (
-    <div className={`web-puzzle-board${completed ? ' is-complete' : ''}`} role="group" aria-label={`Trail ${level.id}: ${level.name}`}>
+    // Board interactions are reported as game_* events, so the generic click
+    // tracker skips this subtree rather than logging every tap on a hex.
+    <div className={`web-puzzle-board${completed ? ' is-complete' : ''}`} data-analytics-skip role="group" aria-label={`Trail ${level.id}: ${level.name}`}>
       {BOARD_CELLS.map((cell) => (
         <img key={`tile-${keyOf(cell)}`} className="web-puzzle-board__tile" src="/assets/themes/tiles/classic.webp" alt="" width="384" height="384" loading="lazy" decoding="async" style={{ '--q': cell.q + cell.r / 2, '--r': cell.r } as CSSProperties} />
       ))}
@@ -515,6 +518,19 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
   const suppressClick = useRef(false)
   const completed = sameHex(state.firefly, LEVEL_ONE.home)
 
+  // Every exit route funnels through here so analytics can tell an abandoned
+  // puzzle apart from one that was closed after the trail was solved.
+  const closeGame = (method: string) => {
+    trackEvent('game_close', { method, moves: history.length, completed })
+    onClose()
+  }
+  // Kept in a ref so the focus-trap effect below can close the puzzle without
+  // re-registering its listeners after every move.
+  const closeGameRef = useRef(closeGame)
+  useEffect(() => {
+    closeGameRef.current = closeGame
+  })
+
   useEffect(() => {
     if (!open) return
     previouslyFocused.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -528,7 +544,7 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onClose()
+        closeGameRef.current('escape')
         return
       }
       if (event.key !== 'Tab') return
@@ -561,7 +577,7 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
       window.removeEventListener('keydown', onKeyDown)
       window.requestAnimationFrame(() => (returnFocusTo ?? previouslyFocused.current)?.focus())
     }
-  }, [onClose, open, returnFocusTo])
+  }, [open, returnFocusTo])
 
   const targets = useMemo(() => {
     if (selected === 'rura') return fireflyDestinations(LEVEL_ONE, state).map((cell) => [cell])
@@ -571,16 +587,23 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
 
   if (!open) return null
 
-  const commit = (move: PuzzleMove) => {
+  const commit = (move: PuzzleMove, method: 'drag' | 'tap') => {
     setHistory((current) => [...current, state])
     const next = applyMove(LEVEL_ONE, state, move)
+    const solved = sameHex(next.firefly, LEVEL_ONE.home)
+    const moveNumber = history.length + 1
+
+    trackEvent('game_move', { move_type: move.type, method, move_number: moveNumber })
+    if (solved) trackEvent('game_complete', { moves: moveNumber, perfect: moveNumber <= 3 })
+
     setState(next)
     setSelected(null)
     setHintedMove(null)
-    setMessage(sameHex(next.firefly, LEVEL_ONE.home) ? 'Checkpoint reached—trail complete!' : 'Beautiful move. Read the new shape of the board.')
+    setMessage(solved ? 'Checkpoint reached—trail complete!' : 'Beautiful move. Read the new shape of the board.')
   }
 
   const reset = () => {
+    trackEvent('game_reset', { moves: history.length, completed })
     setState(initialState(LEVEL_ONE))
     setHistory([])
     setSelected(null)
@@ -593,6 +616,7 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
   const requestHint = () => {
     const path = solve(LEVEL_ONE, state)
     const move = path?.[0] ?? null
+    trackEvent('game_hint', { moves: history.length, available: Boolean(move) })
     if (!move) {
       setMessage(completed ? 'Rura has already reached the checkpoint.' : 'Restart the trail and try another route.')
       return
@@ -658,7 +682,7 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
 
     if (piece.kind === 'firefly') {
       const destination = fireflyDestinations(LEVEL_ONE, state).find((cell) => sameHex(cell, landedHex))
-      if (destination) commit({ type: 'firefly', to: destination })
+      if (destination) commit({ type: 'firefly', to: destination }, 'drag')
       else {
         setSelected(null)
         setMessage('Rura can only land on a connected open cell. Try another path.')
@@ -669,7 +693,7 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
     const index = LEVEL_ONE.blocks.findIndex((block) => block.id === piece.id)
     const destinations = legalBlockMoves(LEVEL_ONE, state, index)
     const destination = destinations.find((cells) => cells.some((cell) => sameHex(cell, landedHex)))
-    if (destination) commit({ type: 'block', blockId: piece.id, cells: destination })
+    if (destination) commit({ type: 'block', blockId: piece.id, cells: destination }, 'drag')
     else {
       setSelected(null)
       setMessage('That block cannot rest there. It snapped safely back into place.')
@@ -677,9 +701,9 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
   }
 
   return createPortal(
-    <div className="play-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div className="play-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeGame('backdrop') }}>
       <section ref={dialogRef} className="play-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="play-level-title">
-        <button ref={closeButton} className="play-modal__close" type="button" onClick={onClose} aria-label="Close playable puzzle">×</button>
+        <button ref={closeButton} className="play-modal__close" type="button" data-analytics-skip onClick={() => closeGame('close_button')} aria-label="Close playable puzzle">×</button>
         <div className="play-modal__copy">
           <p className="game-eyebrow"><span /> Play the first trail</p>
           <h2 id="play-level-title">Choose Your Door</h2>
@@ -699,7 +723,7 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
             dragOffset={dragOffset}
             interactive
             completed={completed}
-            onCompletionClose={onClose}
+            onCompletionClose={() => closeGame('completion')}
             onBlockClick={(id) => {
               if (suppressClick.current) return
               setSelected(id); setHintedMove(null); setMessage('Drag this piece—or tap a glowing destination.')
@@ -712,23 +736,24 @@ export function PlayLevelModal({ open, onClose, returnFocusTo }: { open: boolean
             onPiecePointerMove={moveDrag}
             onPiecePointerUp={endDrag}
             onTargetClick={(cells) => {
-              if (selected === 'rura') commit({ type: 'firefly', to: cells[0]! })
-              else if (selected) commit({ type: 'block', blockId: selected, cells })
+              if (selected === 'rura') commit({ type: 'firefly', to: cells[0]! }, 'tap')
+              else if (selected) commit({ type: 'block', blockId: selected, cells }, 'tap')
             }}
           />
           <p className="play-modal__board-note"><span aria-hidden="true">↔</span> Drag to move · release to snap</p>
           <div className="play-modal__hex-actions" aria-label="Puzzle actions">
-            <button type="button" onClick={() => {
+            <button type="button" data-analytics-skip onClick={() => {
               const previous = history.at(-1)
               if (!previous) return
+              trackEvent('game_undo', { moves: history.length })
               setState(previous)
               setHistory((current) => current.slice(0, -1))
               setSelected(null)
               setHintedMove(null)
               setMessage('Move undone. Take another look at the trail.')
             }} disabled={!history.length} aria-label="Undo last move"><img src="/assets/board/actions/undo-rounded.svg" alt="" width="48" height="48" /></button>
-            <button type="button" onClick={reset} aria-label="Restart puzzle"><img src="/assets/board/actions/restart-rounded.svg" alt="" width="48" height="48" /></button>
-            <button type="button" onClick={requestHint} disabled={completed} aria-label="Show an unlimited hint"><img src="/assets/board/actions/hint-rounded.svg" alt="" width="48" height="48" /></button>
+            <button type="button" data-analytics-skip onClick={reset} aria-label="Restart puzzle"><img src="/assets/board/actions/restart-rounded.svg" alt="" width="48" height="48" /></button>
+            <button type="button" data-analytics-skip onClick={requestHint} disabled={completed} aria-label="Show an unlimited hint"><img src="/assets/board/actions/hint-rounded.svg" alt="" width="48" height="48" /></button>
           </div>
         </div>
       </section>
