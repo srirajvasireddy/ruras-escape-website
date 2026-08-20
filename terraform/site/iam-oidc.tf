@@ -42,10 +42,19 @@ data "aws_iam_policy_document" "github_actions_trust" {
     # The deploy job runs in the `production` environment, which is the sub
     # claim GitHub sends. The branch form is kept so the workflow still
     # authenticates if the environment is ever removed.
+    #
+    # GitHub now embeds immutable numeric ids in the subject, as
+    # owner@ownerId/repo@repoId, so the plain form alone never matches. The
+    # "@" is what keeps the wildcards safe: GitHub logins cannot contain "@"
+    # or "/", so no other account can craft a subject that matches these.
+    # Both forms are listed because the plain one is still sent in some
+    # contexts.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
+        "repo:${var.github_owner}@*/${var.github_repo}@*:environment:production",
+        "repo:${var.github_owner}@*/${var.github_repo}@*:ref:refs/heads/main",
         "repo:${var.github_owner}/${var.github_repo}:environment:production",
         "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main",
       ]
