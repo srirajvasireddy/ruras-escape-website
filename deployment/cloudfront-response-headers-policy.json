@@ -1,0 +1,37 @@
+{
+  "ResponseHeadersPolicyConfig": {
+    "Name": "ruras-escape-production-security",
+    "Comment": "Security headers for the static Rura's Escape website",
+    "SecurityHeadersConfig": {
+      "ContentSecurityPolicy": {
+        "ContentSecurityPolicy": "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests",
+        "Override": true
+      },
+      "ContentTypeOptions": { "Override": true },
+      "FrameOptions": { "FrameOption": "DENY", "Override": true },
+      "ReferrerPolicy": { "ReferrerPolicy": "strict-origin-when-cross-origin", "Override": true },
+      "StrictTransportSecurity": {
+        "AccessControlMaxAgeSec": 63072000,
+        "IncludeSubdomains": true,
+        "Preload": false,
+        "Override": true
+      },
+      "XSSProtection": { "Protection": false, "Override": true }
+    },
+    "CustomHeadersConfig": {
+      "Items": [
+        {
+          "Header": "Permissions-Policy",
+          "Value": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+          "Override": true
+        },
+        {
+          "Header": "Cross-Origin-Opener-Policy",
+          "Value": "same-origin",
+          "Override": true
+        }
+      ]
+    }
+  }
+}
+

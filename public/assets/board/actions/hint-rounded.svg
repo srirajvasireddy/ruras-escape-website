@@ -1,0 +1,8 @@
+<!-- Hint bulb glyph — silhouette matches the shop hint badge (Ruras_Escape_Home_Asset_Pack/svg/icon_hint.svg). Scaled to fill the frame and stroke-weighted so it reads as a bold, chunky bulb. Monochrome white fill; tinted at runtime via setTintFill. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 256 256">
+  <g transform="translate(128 128) scale(1.32) translate(-128 -128)" fill="#fff" stroke="#fff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M128 52 C83 52 66 91 83 122 C92 138 105 145 106 166 H150 C151 145 164 138 173 122 C190 91 173 52 128 52 Z"/>
+    <rect x="102" y="164" width="52" height="16" rx="8"/>
+    <rect x="108" y="184" width="40" height="12" rx="6"/>
+  </g>
+</svg>
