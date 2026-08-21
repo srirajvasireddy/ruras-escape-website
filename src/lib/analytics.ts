@@ -71,8 +71,15 @@ export function initAnalytics(): void {
 
   const dataLayer: unknown[] = window.dataLayer ?? []
   window.dataLayer = dataLayer
-  const gtag: NonNullable<Window['gtag']> = (...args: GtagCommand) => {
-    dataLayer.push(args)
+
+  // gtag.js only treats an Arguments object in the data layer as a command.
+  // Pushing a plain array instead makes the tag file it as a data-layer
+  // variable and silently ignore it -- the tag loads and never sends a hit.
+  // Do not "modernize" this into `dataLayer.push(args)`.
+  function gtag(...args: GtagCommand): void {
+    void args
+    // eslint-disable-next-line prefer-rest-params
+    dataLayer.push(arguments)
   }
   window.gtag = gtag
 
@@ -91,7 +98,9 @@ export function initAnalytics(): void {
     // Route changes are reported by trackPageView so each SPA navigation is
     // counted exactly once, with the title the route actually applied.
     send_page_view: false,
-    debug_mode: debugMode,
+    // Only send debug_mode when it is on; passing false tags every event with
+    // a pointless ep.debug_mode parameter.
+    ...(debugMode ? { debug_mode: true } : {}),
   })
 
   const script = document.createElement('script')
